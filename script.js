@@ -7,6 +7,8 @@ const nav = document.querySelector(".nav");
 const photoSlots = document.querySelectorAll("[data-photo-slot]");
 const fullPhotos = document.querySelectorAll(".full-photo");
 const storyPhotos = document.querySelectorAll(".story-photo img");
+const pageSections = Array.from(document.querySelectorAll("main > section"));
+const sceneNextButton = document.querySelector("#scene-next-btn");
 
 scrollButtons.forEach((button) => {
   button.addEventListener("click", () => {
@@ -104,8 +106,61 @@ const updateNavOnScroll = () => {
   nav.classList.toggle("is-scrolled", window.scrollY > 12);
 };
 
+const updateNavHeight = () => {
+  if (!nav) {
+    return;
+  }
+
+  const navHeight = Math.ceil(nav.getBoundingClientRect().height);
+  document.documentElement.style.setProperty("--nav-height", `${navHeight}px`);
+};
+
 window.addEventListener("scroll", updateNavOnScroll, { passive: true });
+window.addEventListener("resize", updateNavHeight);
 updateNavOnScroll();
+updateNavHeight();
+
+const updateSceneNextButton = () => {
+  if (!sceneNextButton || pageSections.length < 2) {
+    return;
+  }
+
+  let currentIndex = 0;
+  let bestDistance = Number.POSITIVE_INFINITY;
+
+  pageSections.forEach((section, index) => {
+    const distance = Math.abs(section.getBoundingClientRect().top);
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      currentIndex = index;
+    }
+  });
+
+  const nextSection = pageSections[currentIndex + 1];
+
+  if (!nextSection) {
+    const isNearBottom = window.innerHeight + window.scrollY >= document.body.scrollHeight - 8;
+    if (isNearBottom) {
+      sceneNextButton.dataset.scrollTarget = "#top";
+      sceneNextButton.classList.add("is-to-top");
+      sceneNextButton.classList.remove("is-hidden");
+      sceneNextButton.setAttribute("aria-label", "맨 위로 이동");
+    } else {
+      sceneNextButton.classList.add("is-hidden");
+      sceneNextButton.classList.remove("is-to-top");
+      sceneNextButton.removeAttribute("data-scroll-target");
+    }
+    return;
+  }
+
+  if (!nextSection.id) {
+    nextSection.id = `snap-section-${currentIndex + 1}`;
+  }
+
+  sceneNextButton.dataset.scrollTarget = `#${nextSection.id}`;
+  sceneNextButton.classList.remove("is-hidden", "is-to-top");
+  sceneNextButton.setAttribute("aria-label", "다음 장면으로 이동");
+};
 
 const photoNameCandidates = (slot) => [
   `photo-${slot}`,
@@ -114,7 +169,6 @@ const photoNameCandidates = (slot) => [
   `sample${slot}`,
   `img-${slot}`,
   `img${slot}`,
-  `${slot}`,
 ];
 
 const photoExtensions = ["jpg", "jpeg", "png", "webp"];
@@ -142,11 +196,19 @@ photoSlots.forEach((img) => {
     return;
   }
 
+  const defaultSrc = img.getAttribute("src");
+  if (defaultSrc) {
+    img.loading = "eager";
+    return;
+  }
+
   const srcList = [];
   photoNameCandidates(slot).forEach((name) => {
     photoExtensions.forEach((ext) => {
-      srcList.push(`./assets/images/${name}.${ext}`);
-      srcList.push(`./assets/imgages/${name}.${ext}`);
+      const candidate = `./assets/images/${name}.${ext}`;
+      if (!srcList.includes(candidate)) {
+        srcList.push(candidate);
+      }
     });
   });
   loadImage(img, srcList);
@@ -169,11 +231,33 @@ const parallaxStoryPhotos = () => {
     const rect = img.getBoundingClientRect();
     const distance = rect.top + rect.height / 2 - viewportMid;
     const ratio = Math.max(-1, Math.min(1, distance / viewportMid));
-    const offset = ratio * -28;
+    const offset = ratio * -48;
     img.style.setProperty("--parallax-y", `${offset}px`);
   });
 };
 
 window.addEventListener("scroll", parallaxStoryPhotos, { passive: true });
+window.addEventListener("scroll", updateSceneNextButton, { passive: true });
 window.addEventListener("resize", parallaxStoryPhotos);
+window.addEventListener("resize", updateSceneNextButton);
 parallaxStoryPhotos();
+updateSceneNextButton();
+
+if (sceneNextButton) {
+  sceneNextButton.addEventListener("click", () => {
+    if (sceneNextButton.classList.contains("is-to-top")) {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
+
+    const targetSelector = sceneNextButton.dataset.scrollTarget;
+    if (!targetSelector) {
+      return;
+    }
+
+    const target = document.querySelector(targetSelector);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
+}
