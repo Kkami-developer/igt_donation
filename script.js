@@ -243,6 +243,56 @@ window.addEventListener("resize", updateSceneNextButton);
 parallaxStoryPhotos();
 updateSceneNextButton();
 
+/* 후원 섹션: 정기/일시 전환 · 금액 선택 (정기 등급 설명은 호버 툴팁으로만 표시) */
+const heroDockTabs = document.querySelectorAll(".hero-dock-tab");
+const heroDockPanel = document.querySelector("#donate-dock-panel");
+const heroDockFieldLabel = document.querySelector("#donate-field-label");
+const heroAmountsMonthly = document.querySelectorAll("#donate-amounts-monthly .hero-amount-btn");
+const heroAmountsOnce = document.querySelectorAll("#donate-amounts-once .hero-amount-btn");
+const heroAmountsMonthlyWrap = document.getElementById("donate-amounts-monthly");
+const heroAmountsOnceWrap = document.getElementById("donate-amounts-once");
+
+const setHeroFieldLabel = (isOnce) => {
+  if (!heroDockFieldLabel) {
+    return;
+  }
+  heroDockFieldLabel.textContent = isOnce ? "일시 후원 금액을 선택해 주세요" : "월 후원 등급 · 금액을 선택해 주세요";
+};
+
+heroDockTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    heroDockTabs.forEach((t) => {
+      t.classList.toggle("is-active", t === tab);
+      t.setAttribute("aria-selected", t === tab ? "true" : "false");
+    });
+    const isOnce = tab.dataset.donateType === "once";
+    if (heroDockPanel) {
+      heroDockPanel.dataset.mode = isOnce ? "once" : "monthly";
+    }
+    if (heroAmountsMonthlyWrap && heroAmountsOnceWrap) {
+      heroAmountsMonthlyWrap.classList.toggle("is-hidden", isOnce);
+      heroAmountsOnceWrap.classList.toggle("is-hidden", !isOnce);
+    }
+    setHeroFieldLabel(isOnce);
+  });
+});
+
+setHeroFieldLabel(false);
+
+heroAmountsMonthly.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    heroAmountsMonthly.forEach((b) => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+  });
+});
+
+heroAmountsOnce.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    heroAmountsOnce.forEach((b) => b.classList.remove("is-active"));
+    btn.classList.add("is-active");
+  });
+});
+
 if (sceneNextButton) {
   sceneNextButton.addEventListener("click", () => {
     if (sceneNextButton.classList.contains("is-to-top")) {
