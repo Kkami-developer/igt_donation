@@ -1,74 +1,30 @@
 const scrollButtons = document.querySelectorAll("[data-scroll-target]");
-const tabButtons = document.querySelectorAll(".tab-btn");
-const tabPanels = document.querySelectorAll(".tab-panel");
 const fadeTargets = document.querySelectorAll(".fade-in");
-const counters = document.querySelectorAll(".count-up");
 const nav = document.querySelector(".nav");
+const breadcrumbBar = document.querySelector(".breadcrumb-bar");
 const photoSlots = document.querySelectorAll("[data-photo-slot]");
 const fullPhotos = document.querySelectorAll(".full-photo");
 const storyPhotos = document.querySelectorAll(".story-photo img");
 const pageSections = Array.from(document.querySelectorAll("main > section"));
 const sceneNextButton = document.querySelector("#scene-next-btn");
 
+const scrollToSectionStart = (target) => {
+  if (!target) {
+    return;
+  }
+  const navHeight = nav ? Math.ceil(nav.getBoundingClientRect().height) : 0;
+  const targetTop = target.getBoundingClientRect().top + window.scrollY - navHeight;
+  window.scrollTo({ top: Math.max(targetTop, 0), behavior: "smooth" });
+};
+
 scrollButtons.forEach((button) => {
   button.addEventListener("click", () => {
     const target = document.querySelector(button.dataset.scrollTarget);
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToSectionStart(target);
     }
   });
 });
-
-tabButtons.forEach((button) => {
-  button.addEventListener("click", () => {
-    const targetTab = button.dataset.tab;
-
-    tabButtons.forEach((btn) => {
-      btn.classList.remove("is-active");
-      btn.setAttribute("aria-selected", "false");
-    });
-
-    tabPanels.forEach((panel) => {
-      panel.classList.remove("is-active");
-    });
-
-    button.classList.add("is-active");
-    button.setAttribute("aria-selected", "true");
-
-    const panel = document.querySelector(`[data-panel="${targetTab}"]`);
-    if (panel) {
-      panel.classList.add("is-active");
-    }
-  });
-});
-
-const animateCounter = (element) => {
-  const target = Number(element.dataset.target || 0);
-  const duration = 1400;
-  const start = performance.now();
-  let hasAnimated = false;
-
-  if (!target || element.dataset.counted === "true") {
-    return;
-  }
-
-  const step = (timestamp) => {
-    const progress = Math.min((timestamp - start) / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const current = Math.round(target * eased);
-    element.textContent = String(current);
-
-    if (progress < 1) {
-      requestAnimationFrame(step);
-    } else if (!hasAnimated) {
-      element.textContent = String(target);
-      element.dataset.counted = "true";
-      hasAnimated = true;
-    }
-  };
-
-  requestAnimationFrame(step);
-};
 
 const observer = new IntersectionObserver(
   (entries) => {
@@ -83,20 +39,6 @@ const observer = new IntersectionObserver(
 );
 
 fadeTargets.forEach((target) => observer.observe(target));
-
-const countObserver = new IntersectionObserver(
-  (entries) => {
-    entries.forEach((entry) => {
-      if (entry.isIntersecting) {
-        animateCounter(entry.target);
-        countObserver.unobserve(entry.target);
-      }
-    });
-  },
-  { threshold: 0.55 }
-);
-
-counters.forEach((counter) => countObserver.observe(counter));
 
 const updateNavOnScroll = () => {
   if (!nav) {
@@ -115,26 +57,66 @@ const updateNavHeight = () => {
   document.documentElement.style.setProperty("--nav-height", `${navHeight}px`);
 };
 
+/** 네비 + 브레드크럼 높이 → 히어로가 남은 뷰포트에 정확히 들어가도록 */
+const updateLayoutAboveHero = () => {
+  if (!nav) {
+    return;
+  }
+
+  const navH = Math.ceil(nav.getBoundingClientRect().height);
+  const crumbH = breadcrumbBar ? Math.ceil(breadcrumbBar.getBoundingClientRect().height) : 0;
+  document.documentElement.style.setProperty("--layout-above-hero", `${navH + crumbH}px`);
+};
+
 window.addEventListener("scroll", updateNavOnScroll, { passive: true });
 window.addEventListener("resize", updateNavHeight);
+window.addEventListener("resize", updateLayoutAboveHero);
 updateNavOnScroll();
 updateNavHeight();
+updateLayoutAboveHero();
+window.addEventListener("load", updateLayoutAboveHero);
+
+/** 현재 뷰포트에서 가장 많이 보이는 섹션 = ‘장면’ (긴 섹션·경계에서도 안정적) */
+const getCurrentSectionIndex = () => {
+  const vh = window.innerHeight;
+  let bestIdx = 0;
+  let bestVis = -1;
+
+  pageSections.forEach((section, index) => {
+    const rect = section.getBoundingClientRect();
+    const visible = Math.min(rect.bottom, vh) - Math.max(rect.top, 0);
+    if (visible > bestVis) {
+      bestVis = visible;
+      bestIdx = index;
+    } else if (visible === bestVis && visible > 0 && index !== bestIdx) {
+      const prevTop = pageSections[bestIdx].getBoundingClientRect().top;
+      if (rect.top < prevTop) {
+        bestIdx = index;
+      }
+    }
+  });
+
+  if (bestVis <= 0 && pageSections.length > 0) {
+    const anchor = window.scrollY + vh * 0.38;
+    pageSections.forEach((section, index) => {
+      const rect = section.getBoundingClientRect();
+      const top = rect.top + window.scrollY;
+      const bottom = top + rect.height;
+      if (anchor >= top && anchor < bottom) {
+        bestIdx = index;
+      }
+    });
+  }
+
+  return bestIdx;
+};
 
 const updateSceneNextButton = () => {
   if (!sceneNextButton || pageSections.length < 2) {
     return;
   }
 
-  let currentIndex = 0;
-  let bestDistance = Number.POSITIVE_INFINITY;
-
-  pageSections.forEach((section, index) => {
-    const distance = Math.abs(section.getBoundingClientRect().top);
-    if (distance < bestDistance) {
-      bestDistance = distance;
-      currentIndex = index;
-    }
-  });
+  const currentIndex = getCurrentSectionIndex();
 
   const nextSection = pageSections[currentIndex + 1];
 
@@ -243,56 +225,6 @@ window.addEventListener("resize", updateSceneNextButton);
 parallaxStoryPhotos();
 updateSceneNextButton();
 
-/* 후원 섹션: 정기/일시 전환 · 금액 선택 (정기 등급 설명은 호버 툴팁으로만 표시) */
-const heroDockTabs = document.querySelectorAll(".hero-dock-tab");
-const heroDockPanel = document.querySelector("#donate-dock-panel");
-const heroDockFieldLabel = document.querySelector("#donate-field-label");
-const heroAmountsMonthly = document.querySelectorAll("#donate-amounts-monthly .hero-amount-btn");
-const heroAmountsOnce = document.querySelectorAll("#donate-amounts-once .hero-amount-btn");
-const heroAmountsMonthlyWrap = document.getElementById("donate-amounts-monthly");
-const heroAmountsOnceWrap = document.getElementById("donate-amounts-once");
-
-const setHeroFieldLabel = (isOnce) => {
-  if (!heroDockFieldLabel) {
-    return;
-  }
-  heroDockFieldLabel.textContent = isOnce ? "일시 후원 금액을 선택해 주세요" : "월 후원 등급 · 금액을 선택해 주세요";
-};
-
-heroDockTabs.forEach((tab) => {
-  tab.addEventListener("click", () => {
-    heroDockTabs.forEach((t) => {
-      t.classList.toggle("is-active", t === tab);
-      t.setAttribute("aria-selected", t === tab ? "true" : "false");
-    });
-    const isOnce = tab.dataset.donateType === "once";
-    if (heroDockPanel) {
-      heroDockPanel.dataset.mode = isOnce ? "once" : "monthly";
-    }
-    if (heroAmountsMonthlyWrap && heroAmountsOnceWrap) {
-      heroAmountsMonthlyWrap.classList.toggle("is-hidden", isOnce);
-      heroAmountsOnceWrap.classList.toggle("is-hidden", !isOnce);
-    }
-    setHeroFieldLabel(isOnce);
-  });
-});
-
-setHeroFieldLabel(false);
-
-heroAmountsMonthly.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    heroAmountsMonthly.forEach((b) => b.classList.remove("is-active"));
-    btn.classList.add("is-active");
-  });
-});
-
-heroAmountsOnce.forEach((btn) => {
-  btn.addEventListener("click", () => {
-    heroAmountsOnce.forEach((b) => b.classList.remove("is-active"));
-    btn.classList.add("is-active");
-  });
-});
-
 if (sceneNextButton) {
   sceneNextButton.addEventListener("click", () => {
     if (sceneNextButton.classList.contains("is-to-top")) {
@@ -307,7 +239,101 @@ if (sceneNextButton) {
 
     const target = document.querySelector(targetSelector);
     if (target) {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
+      scrollToSectionStart(target);
     }
   });
 }
+
+// Impact Cases Tab switching
+const impactTabBtns = document.querySelectorAll(".impact-tab-btn");
+const impactPanels = document.querySelectorAll(".impact-panel");
+
+impactTabBtns.forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const tab = btn.dataset.tab;
+
+    impactTabBtns.forEach((b) => {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
+    impactPanels.forEach((p) => p.classList.remove("active"));
+
+    btn.classList.add("active");
+    btn.setAttribute("aria-selected", "true");
+    const panel = document.getElementById("tab-" + tab);
+    if (panel) panel.classList.add("active");
+  });
+});
+
+document.querySelectorAll("details.approach-more").forEach((detailsEl) => {
+  const hint = detailsEl.querySelector(".approach-more__summary-hint");
+  if (!hint) {
+    return;
+  }
+  const syncHint = () => {
+    hint.textContent = detailsEl.open ? "접기" : "펼치기";
+  };
+  detailsEl.addEventListener("toggle", syncHint);
+  syncHint();
+});
+
+/* ===================================================
+   임팩트 카운터 애니메이션
+   =================================================== */
+const counterEls = document.querySelectorAll(".impact-full__counter-num[data-target]");
+
+const animateCounter = (el) => {
+  const target = parseInt(el.dataset.target, 10);
+  const duration = target <= 2 ? 600 : 1200;
+  const start = performance.now();
+  el.classList.add("is-counted");
+  const tick = (now) => {
+    const elapsed = now - start;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target);
+    if (progress < 1) requestAnimationFrame(tick);
+    else el.textContent = target;
+  };
+  requestAnimationFrame(tick);
+};
+
+const counterObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        animateCounter(entry.target);
+        counterObserver.unobserve(entry.target);
+      }
+    });
+  },
+  { threshold: 0.4 }
+);
+
+counterEls.forEach((el) => counterObserver.observe(el));
+
+/* ===================================================
+   나머지 사례 리스트 순차 페이드인
+   =================================================== */
+const restItems = document.querySelectorAll(".impact-rest__item");
+const restClosing = document.querySelector(".impact-rest__closing");
+
+const restObserver = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        restItems.forEach((item, i) => {
+          setTimeout(() => item.classList.add("is-visible"), i * 60);
+        });
+        if (restClosing) {
+          setTimeout(() => restClosing.classList.add("is-visible"), restItems.length * 60 + 200);
+        }
+        restObserver.unobserve(entry.target);
+      }
+    });
+  },
+  { threshold: 0.05 }
+);
+
+const restSection = document.querySelector(".impact-rest");
+if (restSection) restObserver.observe(restSection);
