@@ -19,6 +19,15 @@
   --focus-ring: rgba(0, 166, 86, 0.35);
   /* 네비 + 브레드크럼 높이 — script.js에서 픽셀로 갱신 */
   --layout-above-hero: 112px;
+  /* 우하단 플로팅 후원(육각형)과 겹치지 않도록 카운터·섹션 여백 */
+  --floating-donate-size: 118px;
+  --floating-donate-gap: 1rem;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --floating-donate-size: 106px;
+  }
 }
 
 * {
@@ -1992,17 +2001,31 @@ a {
    =================================================== */
 
 .impact-full {
-  min-height: 100svh;
+  min-height: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
   color: #f6fbf7;
   position: relative;
-  overflow: hidden;
-  padding: clamp(5rem, 10vw, 8rem) clamp(1.5rem, 6vw, 6rem);
+  overflow: visible;
+  padding: clamp(3rem, 6vh, 4.5rem) clamp(1.5rem, 6vw, 6rem);
+  /* 카운터(우하단)가 플로팅 후원 버튼을 피하도록 오른쪽만 여유 */
+  padding-right: max(
+    clamp(1.5rem, 6vw, 6rem),
+    calc(env(safe-area-inset-right, 0px) + var(--floating-donate-size) + var(--floating-donate-gap) * 2)
+  );
   scroll-snap-align: start;
-  scroll-snap-stop: always;
+  scroll-snap-stop: normal;
   background: #152a1e;
+}
+
+/* 블러·스케일 배경만 잘라내고, 섹션 자체는 세로로 늘어날 수 있게 */
+.impact-full__media {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
 }
 
 .impact-full__bg {
@@ -2039,24 +2062,83 @@ a {
 
 .impact-full--alt .impact-full__overlay {
   background:
-    radial-gradient(ellipse 70% 50% at 20% 55%, rgba(0, 166, 86, 0.1) 0%, transparent 55%),
-    linear-gradient(115deg, rgba(12, 22, 16, 0.76) 0%, rgba(12, 22, 16, 0.44) 52%, rgba(12, 22, 16, 0.3) 100%),
+    radial-gradient(ellipse 70% 50% at 80% 45%, rgba(0, 166, 86, 0.12) 0%, transparent 55%),
+    linear-gradient(-115deg, rgba(12, 22, 16, 0.76) 0%, rgba(12, 22, 16, 0.44) 52%, rgba(12, 22, 16, 0.3) 100%),
     linear-gradient(to top, rgba(12, 22, 16, 0.84) 0%, transparent 42%);
+}
+
+/* 임팩트 2: 오른쪽 정렬 레이아웃 (카운터는 왼쪽 하단으로 이동) */
+.impact-full--alt {
+  align-items: flex-end;
+  text-align: right;
+}
+
+.impact-full--alt .impact-full__inner {
+  text-align: right;
+  margin-left: auto;
+}
+
+.impact-full--alt .impact-full__desc {
+  margin-left: auto;
+}
+
+.impact-full--alt .impact-law-flow {
+  justify-content: flex-end;
+}
+
+@media (min-width: 768px) {
+  .impact-full--alt {
+    /* 좌하단 카운터와 겹치지 않도록 왼쪽에도 여유 */
+    padding-left: clamp(3rem, 9vw, 7rem);
+  }
+
+  .impact-full--alt .impact-full__inner {
+    /* 오른쪽 정렬이라 inner의 추가 오른쪽 여백은 불필요 */
+    padding-right: 0;
+  }
+}
+
+/* 오른쪽 정렬 섹션의 카운터는 왼쪽 하단으로 */
+.impact-full--alt .impact-full__counter {
+  right: auto;
+  left: max(
+    clamp(1.25rem, 4vw, 3rem),
+    calc(env(safe-area-inset-left, 0px) + 1rem)
+  );
+  text-align: left;
+}
+
+.impact-full--alt .impact-full__counter-label {
+  margin-left: 0;
+  margin-right: auto;
+}
+
+.impact-full--alt .impact-full__counter--word {
+  text-align: left;
 }
 
 .impact-full__inner {
   position: relative;
   z-index: 2;
-  max-width: 780px;
+  max-width: 720px;
+  flex-shrink: 0;
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .impact-full__inner {
+    /* 우하단 카운터와 겹치지 않도록 오른쪽 여백만 */
+    padding-right: clamp(6rem, 14vw, 11rem);
+  }
 }
 
 .impact-full__tag {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--accent);
-  margin: 0 0 1rem;
+  margin: 0 0 0.55rem;
 }
 
 .impact-full__label {
@@ -2068,29 +2150,29 @@ a {
 }
 
 .impact-full__title {
-  font-size: clamp(2.4rem, 7vw, 5rem);
+  font-size: clamp(1.65rem, 3.6vw, 2.6rem);
   font-weight: 800;
-  line-height: 1.12;
+  line-height: 1.18;
   letter-spacing: -0.025em;
   color: #ffffff;
-  margin: 0 0 1.5rem;
+  margin: 0 0 0.85rem;
   text-shadow: 0 2px 28px rgba(0, 0, 0, 0.42);
 }
 
 .impact-full__desc {
-  font-size: clamp(1rem, 2vw, 1.2rem);
-  line-height: 1.75;
+  font-size: clamp(0.92rem, 1.4vw, 1.04rem);
+  line-height: 1.65;
   color: rgba(244, 249, 245, 0.84);
   margin: 0;
-  max-width: 48ch;
+  max-width: 52ch;
 }
 
 .impact-full__desc + .impact-full__desc {
-  margin-top: 1rem;
+  margin-top: 0.7rem;
 }
 
 .impact-full__figure {
-  margin: 1.75rem 0 0;
+  margin: 1rem 0 0;
   padding: 0;
   display: inline-block;
   max-width: 100%;
@@ -2102,7 +2184,7 @@ a {
 }
 
 .impact-full__figure--compact {
-  margin-top: 1.35rem;
+  margin-top: 0.85rem;
 }
 
 .impact-full__figure-img {
@@ -2111,69 +2193,75 @@ a {
   max-width: 100%;
   height: auto;
   object-fit: contain;
-  max-height: min(34vh, 280px);
+  max-height: min(22vh, 180px);
 }
 
-/* 카운터 — 우하단 */
+/* 카운터 — 우하단 (플로팅 육각 후원 버튼을 피해서 왼쪽) */
 .impact-full__counter {
   position: absolute;
-  right: clamp(1.5rem, 6vw, 6rem);
-  bottom: clamp(2.5rem, 6vw, 5rem);
+  right: max(
+    clamp(1.25rem, 4vw, 3rem),
+    calc(env(safe-area-inset-right, 0px) + var(--floating-donate-size) + var(--floating-donate-gap))
+  );
+  bottom: max(
+    clamp(1.25rem, 3vh, 2.25rem),
+    calc(env(safe-area-inset-bottom, 0px) + 0.75rem)
+  );
   text-align: right;
+  line-height: 1;
   z-index: 2;
+  max-width: min(46vw, 22rem);
+  pointer-events: none;
 }
 
 .impact-full__counter-num {
-  display: block;
-  font-size: clamp(4rem, 13vw, 10rem);
+  display: inline-block;
+  vertical-align: baseline;
+  font-size: clamp(2.4rem, 6vw, 4.5rem);
   font-weight: 900;
   line-height: 0.9;
-  color: rgba(0,166,86,0.22);
+  color: rgba(0, 166, 86, 0.45);
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
   transition: color 0.6s ease;
 }
 
 .impact-full__counter-num.is-counted {
-  color: rgba(0,166,86,0.45);
+  color: #00c96a;
 }
 
 .impact-full__counter-unit {
-  font-size: clamp(1.5rem, 4vw, 3rem);
+  display: inline-block;
+  margin-left: 0.12em;
+  vertical-align: baseline;
+  font-size: clamp(1rem, 2.2vw, 1.6rem);
   font-weight: 800;
-  color: rgba(0,166,86,0.38);
+  color: rgba(0, 166, 86, 0.7);
   letter-spacing: -0.02em;
 }
 
 .impact-full__counter-label {
   display: block;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.52);
+  font-size: clamp(0.72rem, 1.1vw, 0.82rem);
+  color: rgba(244, 249, 245, 0.7);
   margin-top: 0.4rem;
   letter-spacing: 0.02em;
+  max-width: 22ch;
+  margin-left: auto;
+  line-height: 1.4;
 }
 
-/* 숫자 대신 강조 키워드 (예: 최초) */
 .impact-full__counter--word {
   text-align: right;
 }
 
-.impact-full__counter--word .impact-full__counter-label {
-  margin-top: 0.35rem;
-  color: rgba(244, 249, 245, 0.55);
-  font-size: clamp(0.78rem, 1.6vw, 0.9rem);
-  max-width: 12em;
-  margin-left: auto;
-  line-height: 1.35;
-}
-
 .impact-full__counter-word {
   display: block;
-  font-size: clamp(3.5rem, 11vw, 7rem);
+  font-size: clamp(2.2rem, 5.2vw, 4rem);
   font-weight: 900;
   line-height: 0.95;
   letter-spacing: -0.06em;
-  color: rgba(0, 166, 86, 0.42);
+  color: #9ae2b7;
   text-shadow: 0 4px 32px rgba(0, 0, 0, 0.35);
 }
 
@@ -2219,23 +2307,56 @@ a {
   margin-top: 1.5rem;
 }
 
-/* 사용자 지도 이미지 + 광주 마커 오버레이 (--marker-x, --marker-y: 이미지 기준 %) */
+/* 세로로 긴 윤곽 지도: 노트북(가로)에 맞게 높이를 제한한 가로 슬롯 안에만 표시 */
 .impact-map-frame {
   position: relative;
-  display: block;
-  width: min(320px, 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: min(100%, 680px);
+  max-width: 100%;
+  height: min(26vh, 220px);
+  min-height: 160px;
   margin: 0;
   border-radius: 12px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.22);
-  background: rgba(255, 255, 255, 0.06);
+  background: #0f1f18;
+  isolation: isolate;
+}
+
+/* 실제 지도 이미지 크기에 맞춰 마커 % 위치가 맞도록 */
+.impact-map-inner {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: max-content;
+  max-width: 100%;
+  margin: auto;
+}
+
+/* 투명 배경 + 흰 윤곽선: 뒤 사진이 비치도록 */
+.impact-map-photo {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background: url("./assets/images/photo-3.png") center 42% / cover no-repeat;
+  transform: scale(1.06);
+  filter: saturate(1.05) brightness(0.92);
 }
 
 .impact-map-img {
+  position: relative;
+  z-index: 1;
   display: block;
-  width: 100%;
+  max-width: 100%;
+  max-height: min(26vh, 220px);
+  width: auto;
   height: auto;
+  object-fit: contain;
+  object-position: center;
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.55));
 }
 
 .impact-map-marker {
@@ -2458,32 +2579,31 @@ a {
 
 @media (max-width: 767px) {
   .impact-full {
-    padding: clamp(4rem, 12vw, 6rem) clamp(1.25rem, 5vw, 2rem);
-    justify-content: flex-end;
-    padding-bottom: 6rem;
+    padding: clamp(2.5rem, 9vw, 4rem) clamp(1.25rem, 5vw, 2rem);
+    padding-bottom: max(
+      7.5rem,
+      calc(env(safe-area-inset-bottom, 0px) + var(--floating-donate-size) * 0.65 + 1.5rem)
+    );
   }
 
+  .impact-full__inner {
+    padding-right: 0;
+  }
+
+  /* 모바일에서는 우하단 고정 대신 본문 흐름에 포함시켜 잘림/가림 방지 */
   .impact-full__counter {
     position: static;
+    margin: 1.25rem 0 0;
     text-align: left;
-    margin-top: 2rem;
+    max-width: none;
+  }
+
+  .impact-full__counter-label {
+    margin-left: 0;
   }
 
   .impact-full__counter--word {
     text-align: left;
-  }
-
-  .impact-full__counter--word .impact-full__counter-label {
-    margin-left: 0;
-    max-width: none;
-  }
-
-  .impact-full__counter-num {
-    font-size: clamp(3rem, 18vw, 5rem);
-  }
-
-  .impact-full__counter-word {
-    font-size: clamp(2.75rem, 16vw, 5rem);
   }
 
   .impact-law-flow {
